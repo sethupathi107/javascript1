@@ -126,7 +126,7 @@ console.log(output);
 
 // Array
 
-arr = ["sethu",'jayaprakash','arjitha','chandru'];
+let arr = ["sethu",'jayaprakash','arjitha','chandru'];
 console.log(arr[0])
 console.log(arr[1])
 console.log(arr[2])
@@ -148,6 +148,8 @@ find
 for each
 some -> it will return true if it has the condition which give true it will return true otherwise it will return false
 every -> this wil return true if every item in the arr follow the condition if not it will return false;
+
+include -> this will return true if it has the value in that array
 */
 
 const ress= arr.some((item)=> {
@@ -158,3 +160,94 @@ const res1=arr.reduce( (acc,curr) => acc+=" " + curr , "");
 console.log(res1);
 
 console.log(ress)
+
+
+// iterable
+
+
+
+function  createIterator(arr){
+    let count=0;
+    return {
+        next:function(){
+            return count<arr.length?
+            {value:arr[count++],done:false}:
+            {value:undefined,done:true}
+        }
+    }
+}
+
+
+let myIterator = createIterator(arr)
+
+let map = new Map();
+map.set('banana', 1);
+map.set('orange', 2);
+map.set('meat', 4);
+
+let obj = Object.fromEntries(map.entries()); // make a plain object (*)
+
+// done!
+// obj = { banana: 1, orange: 2, meat: 4 }
+
+alert(obj.orange); // 2
+
+arr = [1, 2, 3, 4, 5];
+// let value = arr.reduce(function(accumulator, item, index, array) {
+//   // ...
+// }, [initial]);
+
+
+let result = arr.reduce((sum, current) => sum + current, 0);
+
+alert(result); // 15
+
+let options = {
+  title: "My menu",
+  items: ["Item1", "Item2"]
+};
+
+function showMenu({
+  title = "Untitled",
+  width: w = 100,  // width goes to w
+  height: h = 200, // height goes to h
+  items: [item1, item2] // items first element goes to item1, second to item2
+}) {
+  alert( `${title} ${w} ${h}` ); // My Menu 100 200
+  alert( item1 ); // Item1
+  alert( item2 ); // Item2
+}
+
+showMenu(options);
+
+
+let myObj ={
+    name:"sethu",
+    type:"intern",
+    salary:"20k",
+    native:"Thiruvallur"
+}
+
+function showStatus({
+    name:fullName = "now defined",
+    type:designation = "unEmployed",
+    salary:income= "Unpaid",
+    native: birthPlace = "Unknown"
+}){
+    alert(fullName +" is a good person"+ " he is "+designation+" so he got paid"+income+" every month he is form "+birthPlace)
+}
+
+showStatus(myObj);
+
+
+function info(name,age,...rest){
+    alert("i am "+name+"and my age is "+age+"this is my rest of the details in a array of object"+rest)
+}
+info("sethu",20,"thiruvallur","this is a extra data","thsi is second extra data","and so on")
+
+
+
+// new function 
+
+let fun = new Function("a","b","return a+b")
+console.log(fun(1,2))
