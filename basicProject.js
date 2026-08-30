@@ -1,5 +1,8 @@
 //Hii
 
+const sethukk =await fetch("https://jsonplaceholder.typicode.com/users/1");
+console.log(sethukk)
+
 let message;
 login='Director'
 
@@ -251,3 +254,161 @@ info("sethu",20,"thiruvallur","this is a extra data","thsi is second extra data"
 
 let fun = new Function("a","b","return a+b")
 console.log(fun(1,2))
+
+
+let participant1 = {
+    firstname:"sethupathi",
+    attendance:50,
+    odApply:function(a,b){
+        this.attendance=a+b;
+    }
+}
+let participant2 = {
+    firstname:"jayaPrakash",
+    attendance:1
+}
+
+participant1.odApply.call(participant2,10,50);
+console.log(participant2)
+participant1.odApply.apply(participant2,[10,30]);
+console.log(participant2)
+let bind1 = participant1.odApply.bind(participant2,12,50);
+bind1()
+console.log(participant2)
+
+
+let user2 = {
+  name: "John"
+};
+
+Object.defineProperty(user, "name", {
+  writable: false
+});
+
+// user.name = "Pete";
+
+/*
+There’s absolutely nothing we can do with Math.PI.
+
+Making a property non-configurable is a one-way road. We cannot change it back with defineProperty.
+
+Please note: configurable: false prevents changes of property flags and its deletion, while allowing to change its value.
+
+Here user.name is non-configurable, but we can still change it (as it’s writable):
+*/
+
+let animal = {
+  eats: true
+};
+let rabbit = {
+  jumps: true
+};
+
+rabbit.__proto__ = animal; // (*)
+
+// we can find both properties in rabbit now:
+alert( rabbit.eats ); // true (**)
+alert( rabbit.jumps ); // true
+
+
+/*
+In JavaScript, every object property has property flags that control how that property behaves: 
+writable determines whether its value can be changed, enumerable determines whether it appears during operations like Object.keys() 
+or for...in, and configurable determines whether the property can be deleted or its descriptor can be changed.
+For example, a normal object property created with { name: "Sethu" } has all three flags set to true by default. 
+These flags can be inspected using Object.getOwnPropertyDescriptor() and controlled using Object.defineProperty().
+*/
+
+
+
+class CoffeeMachine {
+  #_waterAmount = 0;
+
+  set waterAmount(value) {
+    if (value < 0) {
+      value = 0;
+    }
+    this.#_waterAmount = value;
+  }
+
+  get waterAmount() {
+    return this.#_waterAmount;
+  }
+
+  constructor(power) {
+    this._power = power;
+  }
+
+}
+
+let coffeeMachine = new CoffeeMachine(100);
+
+coffeeMachine.waterAmount = 77;
+
+console.log(coffeeMachine.waterAmount);
+console.log(coffeeMachine._waterAmount);
+
+
+
+function fun77(a){
+    console.log("sethupathi")
+}
+
+// flag=true;
+// while(flag){
+//     let promise=new Promise((resolve,reject) )
+// }
+
+function getUser() {
+    return new Promise((resolve, reject) => {
+
+        fetch("https://jsonplaceholder.typicode.com/users/1")
+            .then(response => {
+                if (!response.ok) {
+                    reject(new Error("Request failed"));
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                resolve(data);
+            })
+            .catch(error => {
+                reject(error);
+            });
+    });
+}
+
+
+
+
+let sethupathi =getUser()
+    .then(user => {
+        console.log(user);
+    })
+    .catch(error => {
+        console.log(error);
+    });
+
+// setInterval(() => {
+//     console.log(sethupathi)
+// }, 100);
+
+
+
+/*
+<script type="module">
+    const sethu = await fetch("https://jsonplaceholder.typicode.com/users/1");
+    console.log(sethu)
+</script>
+*/
+
+export const timeout = 5000;
+export const url = "https://api.example.com";
+
+export default function myName() {
+    console.log("this is sethu")
+}
+
+// only one default export and many export can be declared.
+
