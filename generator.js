@@ -225,3 +225,26 @@ console.log(
     "Form width:",
     form.offsetWidth
 );
+
+const add = a => b => a + b;
+
+const add10 = add(10);
+
+const numbers = [1, 2, 3, 4];
+
+const result = numbers.map(add10);
+
+console.log(result);
+
+const filterByName = (list, name) => {
+  return list.filter(item => item.name !== name);
+}
+
+console.log(filterByName(list, 'John'));
+/*
+[
+  { id: 1, name: 'Steve', email: 'steve@example.com' },
+  { id: 3, name: 'Pamela', email: 'pam@example.com' },
+  { id: 4, name: 'Liz', email: 'liz@example.com' }
+]
+*/
