@@ -248,3 +248,4 @@ console.log(filterByName(list, 'John'));
   { id: 4, name: 'Liz', email: 'liz@example.com' }
 ]
 */
+
