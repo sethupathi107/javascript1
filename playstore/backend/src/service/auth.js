@@ -3,9 +3,6 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import pool from "../db/pool.js"
 import { logger, logActivity } from "../utils/logger.js";
-import env from 'dotenv';
-
-env.config();
 
 const USERS_FILE = process.env.USERS_FILE;
 
@@ -163,13 +160,12 @@ async function signup(req,res){
         console.log(error)
 
         if(error.code=="23505"){
-            res.status(409).json({
+            return res.status(409).json({
                 message:"username already exist"
-            })
+            });
         }
 
         res.status(500).json({
-            mess:error,
             message: "Internal server error",
         });
     }
@@ -188,15 +184,20 @@ async function refreshToken(req,res) {
 
         const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
 
-        const users = await getUsers();
-
-        const user = users.find(
-            user => user.id === decoded.id
-        );
-
-        if (!user || !(user.refreshTokens || []).includes(refreshToken)) {
-            return res.status(403).json({
+        const result = await pool.query('SELECT id,email, password FROM users WHERE email = $1', [decoded.email]);
+        if (result.rows.length===0) {
+            return res.status(401).json({
                 message: "Invalid refresh token"
+            });
+        }
+
+        const user = result.rows[0];
+
+        const token = await pool.query('SELECT token FROM sessiontable WHERE user_id = $1 AND token = $2', [user.id, refreshToken]);
+
+        if (token.rows.length===0) {
+            return res.status(401).json({
+                message: "token expired login again"
             });
         }
 

@@ -5,27 +5,28 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "migrate": "sequelize-cli db:migrate",
-    "migrate:undo": "sequelize-cli db:migrate:undo",
-    "seed": "sequelize-cli db:seed:all"
+    "start": "node --env-file=.env server.js",
+    "dev": "node --env-file=.env --watch server.js",
+    "migrate": "node --env-file=.env src/sequelize/config/cli.js up",
+    "migrate:down": "node --env-file=.env src/sequelize/config/cli.js down",
+    "migrate:status": "node --env-file=.env src/sequelize/config/cli.js pending",
+    "migrate:create": "node --env-file=.env src/sequelize/config/cli.js create --folder src/sequelize/config/migrations --name"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@sequelize/core": "^7.0.0-alpha.48",
+    "@sequelize/postgres": "^7.0.0-alpha.48",
     "bcrypt": "^6.0.0",
-    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.3",
     "nodemon": "^3.1.14",
     "pg": "^8.23.0",
     "pg-hstore": "^2.3.4",
-    "sequelize": "^6.37.8",
-    "sequelize-cli": "^6.6.5",
+    "umzug": "^3.8.3",
     "winston": "^3.19.0"
   }
 }

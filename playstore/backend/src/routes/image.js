@@ -1,5 +1,5 @@
 import express from "express";
-import imageController from "../controller/image.js";
+import imageController from "../service/image.js";
 import imageValidators from "../utils/validators/image.js";
 import validateRequest from "../utils/validateRequest.js";
 

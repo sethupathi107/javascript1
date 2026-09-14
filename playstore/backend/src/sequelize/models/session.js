@@ -1,37 +1,47 @@
-import {Model, DataTypes } from 'sequelize'
-class User extends Model {}
+import { Model, DataTypes } from '@sequelize/core';
 
-User.init(
-  {
-    user_id: {
+  // id SERIAL PRIMARY KEY,
+  // user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  // token TEXT NOT NULL,
+  // created_at TIMESTAMP DEFAULT NOW(),
+  // expires_at TIMESTAMP NOT NULL
+
+export default function defineSession(sequelize, { User }) {
+  class Session extends Model {}
+
+  Session.init(
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        allowNull: false,
+        unique: true,
+        primaryKey: true,
+      },
+      userId: {
+        type: DataTypes.UUID, 
+        allowNull: false,
+        references: {
+          model: User,
+          key: 'id',
+        },
+        validate: { notEmpty: true },
+      },
+      token: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: false,
-        primaryKey:false,
-        validate:{notEmpty:true,len:[2,50]},
+        unique: true,
+        validate: { notEmpty: true },
+      },
     },
-    email: {
-        type : DataTypes.STRING,
-        allowNull:false,
-        unique:true,
-        primaryKey:false,
-        autoIncrement:false,
-        validate: {
-            isEmail: true,
-            notEmpty: true,
-        },
-    },
-    passward: {
-        type:DataTypes.STRING,
-        allowNull:false,
-        validate:{notEmpty:true,len:[60,60]},
-    },
-  },
-  {
-    sequelize,
-    modelName: 'User', 
-    paranoid:true,
-  }
-);
+    {
+      sequelize,
+      modelName: 'Session',
+      timestamps: true,
+      paranoid: true,
+      underscored: true,
+    }
+  );
 
-module.exports = User;
+  return Session;
+}

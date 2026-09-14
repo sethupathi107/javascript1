@@ -9,8 +9,7 @@ import auth from "./src/middlewares/auth.js"
 import requireAdmin from "./src/middlewares/requireAdmin.js"
 import { logger } from "./src/utils/logger.js"
 
-
-const app = express();
+const app = express(); 
 app.use(express.json())
 app.use("/v1/sign",authRoutes);
 app.use(auth);
@@ -19,5 +18,3 @@ app.use("/v1/images",image);
 app.use("/v1/category",category);
 app.use("/v1/download",download);
 app.use("/v1/admin",requireAdmin,admin);
-
-app.listen(8000,()=>logger.info("the server is running on port 8000"));

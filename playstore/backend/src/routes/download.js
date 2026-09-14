@@ -1,5 +1,5 @@
 import express from "express";
-import downloadController from "../controller/download.js";
+import downloadController from "../service/download.js";
 import downloadValidators from "../utils/validators/download.js";
 import validateRequest from "../utils/validateRequest.js";
 

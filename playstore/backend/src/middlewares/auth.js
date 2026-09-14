@@ -1,5 +1,6 @@
-const JWT_SECRET = "my-super-secret-key";
 import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function auth(req, res, next) {
 
