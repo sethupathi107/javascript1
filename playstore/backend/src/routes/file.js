@@ -1,5 +1,5 @@
 import express from "express";
-import appController from "../service/file.js";
+import appController from "../controller/file.js";
 import appValidators from "../utils/validators/app.js";
 import validateRequest from "../utils/validateRequest.js";
 

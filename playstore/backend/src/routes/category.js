@@ -1,5 +1,5 @@
 import express from "express";
-import categoryController from "../service/category.js";
+import categoryController from "../controller/category.js";
 import categoryValidators from "../utils/validators/category.js";
 import validateRequest from "../utils/validateRequest.js";
 

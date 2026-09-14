@@ -1,5 +1,5 @@
 import express from "express";
-import authentication from "../service/auth.js"
+import authentication from "../controller/auth.js"
 import authValidators from "../utils/validators/auth.js";
 import validateRequest from "../utils/validateRequest.js";
 
