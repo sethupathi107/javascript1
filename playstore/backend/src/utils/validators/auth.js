@@ -44,10 +44,15 @@ const resetPasswordValidator = [
     password("newPassword")
 ];
 
+const deleteAccountValidator =[
+    password("password")
+]
+
 export default {
     signupValidator,
     signinValidator,
     refreshTokenValidator,
     forgotPasswordValidator,
-    resetPasswordValidator
+    resetPasswordValidator,
+    deleteAccountValidator
 };

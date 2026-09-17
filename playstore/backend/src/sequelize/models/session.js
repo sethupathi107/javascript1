@@ -29,19 +29,18 @@ export default function defineSession(sequelize, { User }) {
       },
       token: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: false, 
         unique: true,
         validate: { notEmpty: true },
       },
-    },
+    }, 
     {
       sequelize,
       modelName: 'Session',
       timestamps: true,
       paranoid: true,
-      underscored: true,
     }
   );
 
-  return Session;
+  return Session; 
 }

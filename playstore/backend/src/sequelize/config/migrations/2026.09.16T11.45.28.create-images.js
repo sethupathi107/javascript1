@@ -1,19 +1,21 @@
 import { DataTypes } from '@sequelize/core';
-
 /** @type {import('umzug').MigrationFn<any>} */
 export const up = async params => {
     const sequelize = params.context;
     const qi = sequelize.queryInterface;
-    await qi.createTable('Categories', {
+    await qi.createTable('Images', {
         id: {
             type: DataTypes.UUID,
             allowNull: false,
             primaryKey: true,
         },
-        name: {
+        applicationId: {
+            type: DataTypes.UUID,
+            allowNull: false,
+        },
+        filename: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -23,11 +25,14 @@ export const up = async params => {
             type: DataTypes.DATE,
             allowNull: false,
         },
+        deletedAt: {
+            type: DataTypes.DATE,
+        },
     });
 };
 
 /** @type {import('umzug').MigrationFn<any>} */
 export const down = async params => {
     const sequelize = params.context;
-    await sequelize.queryInterface.dropTable('Categories');
+    await sequelize.getQueryInterface().dropTable('Images')
 };

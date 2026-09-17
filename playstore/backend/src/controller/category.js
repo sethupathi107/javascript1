@@ -1,24 +1,12 @@
-import fs from "fs/promises";
-import { logger, logActivity } from "../utils/logger.js";
-
-const CATEGORIES_FILE = "./src/jsonfiles/categories.json";
-
-async function getCategories() {
-    const data = await fs.readFile(CATEGORIES_FILE, "utf-8");
-    return JSON.parse(data);
-}
-
-async function saveCategories(categories) {
-    await fs.writeFile(CATEGORIES_FILE, JSON.stringify(categories, null, 2));
-}
+import { Category } from "../sequelize/config/database.js";
+import { logger } from "../utils/logger.js";
 
 async function getAllCategories(req, res) {
     try {
-        const categories = await getCategories();
+        const categories = await Category.findAll();
         res.json(categories);
     } catch (error) {
         logger.error(error.stack || error.message);
-
         res.status(500).json({ message: "Internal server error" });
     }
 }
@@ -27,27 +15,15 @@ async function createCategory(req, res) {
     try {
         const { name } = req.body;
 
-        if (!name) {
-            return res.status(400).json({ message: "Category name is required" });
-        }
-
-        const categories = await getCategories();
-
-        const existingCategory = categories.find(category => category.name === name);
+        const existingCategory = await Category.findOne({ where: { name } });
 
         if (existingCategory) {
             return res.status(409).json({ message: "Category already exists" });
         }
 
-        const newCategory = {
-            id: Date.now(),
-            name
-        };
+        const newCategory = await Category.create({ name });
 
-        categories.push(newCategory);
-        await saveCategories(categories);
-
-        logActivity(req.user, "created category", { categoryId: newCategory.id, name: newCategory.name });
+        logger.info(`User ${req.user.id} created category ${newCategory.id} (${newCategory.name})`);
 
         res.status(201).json(newCategory);
     } catch (error) {
@@ -58,25 +34,19 @@ async function createCategory(req, res) {
 
 async function deleteCategory(req, res) {
     try {
-        const { id } = req.body;
+        const { name } = req.body;
 
-        if (!id) {
-            return res.status(400).json({ message: "Category id is required" });
-        }
+        const category = await Category.findOne({ where: { name } });
 
-        const categories = await getCategories();
-        const index = categories.findIndex(category => category.id === id);
-
-        if (index === -1) {
+        if (!category) {
             return res.status(404).json({ message: "Category not found" });
         }
 
-        const [deletedCategory] = categories.splice(index, 1);
-        await saveCategories(categories);
+        await category.destroy();
 
-        logActivity(req.user, "deleted category", { categoryId: deletedCategory.id, name: deletedCategory.name });
+        logger.info(`User ${req.user.id} deleted category ${category.id} (${category.name})`);
 
-        res.json({ message: "Category deleted", category: deletedCategory });
+        res.json({ message: "Category deleted", category });
     } catch (error) {
         logger.error(error.stack || error.message);
         res.status(500).json({ message: "Internal server error" });

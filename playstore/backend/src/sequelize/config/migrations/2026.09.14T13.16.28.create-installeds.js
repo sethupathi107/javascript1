@@ -3,19 +3,19 @@ import { DataTypes } from '@sequelize/core';
 export const up = async params => {
     const sequelize = params.context;
     const qi = sequelize.queryInterface;
-    await qi.createTable('installed',{
+    await qi.createTable('Installeds',{
         id:{
             type:DataTypes.UUID,
             allowNull:false,
             priamryKey:true,
             unique:true,
         },
-        userid:{
+        userId:{
             type: DataTypes.UUID,
             allowNull:false,
             validate:{ notEmpty:true },
         },
-        applicationid:{
+        applicationId:{
             type: DataTypes.UUID,
             allowNull:false,
             validate:{ notEmpty:true },
@@ -27,5 +27,5 @@ export const up = async params => {
 export const down = async params => {
     const sequelize = params.context;
     const qi = sequelize.queryInterface;
-    await qi.dropTable('installed');
+    await qi.dropTable('Installeds');
 };

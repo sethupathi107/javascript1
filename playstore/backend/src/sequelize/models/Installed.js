@@ -4,16 +4,21 @@ export default function defineInstalled(sequelize, { User, Application }) {
   class Installed extends Model {
     static associate(models){
         Installed.belongsTo(models.User,{
-            foreignKey:'userId',
+            foreignKey:{name:'userId',
+            onDelete: 'CASCADE',
+            onUpdate: 'CASCADE',
+            },
             as:"user",
         })
         Installed.belongsTo(models.Application,{
-            foreignKey:"applicationId",
-            as : "application"
+            foreignKey:{ name:"applicationId",
+            onDelete: 'CASCADE',
+            onUpdate: 'CASCADE',},
+            as :"application"
         })
     }
   }
-
+  
   Installed.init(
     {
       id: {
@@ -47,7 +52,6 @@ export default function defineInstalled(sequelize, { User, Application }) {
       modelName: 'Installed',
       timestamps: true,
       paranoid: true,
-      underscored: true,
     }
   );
 

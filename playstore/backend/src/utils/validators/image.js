@@ -1,32 +1,31 @@
-import { body, param } from "express-validator";
+import { body } from "express-validator";
 
-const appIdParam = param("id")
-    .notEmpty().withMessage("App id is required")
-    .isInt({ min: 1 }).withMessage("App id must be a positive integer")
-    .toInt();
+const appIdBody = body("applicationId")
+    .notEmpty().withMessage("App applicationId is required")
+    .isUUID().withMessage("App must be a valid UUID")
 
-const appIdParamValidator = [
-    appIdParam
-];
+const imageIdBody = body("imageId")
+    .notEmpty().withMessage("Image id is required")
+    .isUUID().withMessage("Image id must be a valid UUID");
 
-const addAppImageValidator = [
-    appIdParam,
-    body("url")
-        .trim()
-        .notEmpty().withMessage("Image url is required")
-        .isURL().withMessage("Image url must be a valid URL")
+const appIdBodyValidator = [
+    appIdBody
 ];
 
 const deleteAppImageValidator = [
-    appIdParam,
+    appIdBody,
     body("imageId")
         .notEmpty().withMessage("imageId is required")
-        .isInt({ min: 1 }).withMessage("imageId must be a positive integer")
-        .toInt()
+        .isUUID().withMessage("imageId must be a valid UUID")
+];
+
+const getImageFileValidator = [
+    appIdBody,
+    imageIdBody
 ];
 
 export default {
-    appIdParamValidator,
-    addAppImageValidator,
-    deleteAppImageValidator
+    appIdBodyValidator,
+    deleteAppImageValidator,
+    getImageFileValidator
 };

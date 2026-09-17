@@ -1,10 +1,8 @@
-import fs from "fs/promises";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import pool from "../db/pool.js"
-import { logger, logActivity } from "../utils/logger.js";
-
-const USERS_FILE = process.env.USERS_FILE;
+import { User , Session } from "../sequelize/config/database.js";
+import { logger } from "../utils/logger.js";
+import sequelize from "../sequelize/config/database.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_SECRET = process.env.REFRESH_SECRET;
@@ -12,18 +10,6 @@ const RESET_SECRET = process.env.RESET_SECRET;
 const ACCESS_TOKEN_EXPIRY = process.env.ACCESS_TOKEN_EXPIRY;
 const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY;
 const RESET_TOKEN_EXPIRY = process.env.RESET_TOKEN_EXPIRY;
-
-async function getUsers() {
-    const data = await fs.readFile(USERS_FILE, "utf-8");
-    return JSON.parse(data);
-}
-
-async function saveUsers(users) {
-    await fs.writeFile(
-        USERS_FILE,
-        JSON.stringify(users, null, 2)
-    );
-}
 
 function generateAccessToken(user) {
     return jwt.sign(
@@ -61,10 +47,12 @@ async function signin(req,res) {
                 message: "Email and password are required"
             });
         }
-        console.log("sethupathi"); 
 
-        const result = await pool.query('SELECT id,email, password FROM users WHERE email = $1', [email]);
-        if (result.rows.length===0) {
+        const user = await User.findOne({
+            where:{email:email}
+        })
+
+        if (!user) {
             return res.status(401).json({
                 message: "Invalid email or password"
             });
@@ -72,7 +60,7 @@ async function signin(req,res) {
 
         const passwordMatch = await bcrypt.compare(
             password,
-            result.rows[0].password
+            user.password
         );
 
         if (!passwordMatch) {
@@ -80,21 +68,24 @@ async function signin(req,res) {
                 message: "Invalid email or password"
             });
         }
-        const user = {
-            id:result.rows[0].id,
-            email:result.rows[0].email
+        const user1 = {
+            id:user.id,
+            email:user.email
         };
 
-        const accessToken = generateAccessToken(user);
-        const refreshToken = generateRefreshToken(user);
+        const accessToken = generateAccessToken(user1);
+        const refreshToken = generateRefreshToken(user1);
 
-        await pool.query(
-      `INSERT INTO sessiontable (user_id, token, expires_at)
-       VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
-      [user.id, refreshToken]
-    );
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 1);
+        
+        await Session.create({
+            userId:user.id,
+            token:refreshToken,
+            deletedAt:expiresAt
+        })
 
-        logActivity(user, "signed in");
+        logger.info(`User ${user.id} signed in`);
 
         res.json({
             message: "Sign in successful 1",
@@ -115,49 +106,46 @@ async function signin(req,res) {
 async function signup(req,res){
     try {
         const { name, email, password } = req.body;
-
+        
         if (!name || !email || !password) {
             return res.status(400).json({
                 message: "Name, email and password are required"
             });
         }
-
+        
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const result = await pool.query(
-            'INSERT INTO users(username,email,password) VALUES ($1,$2,$3) RETURNING id,username, email, created_at',
-            [name,email,hashedPassword]
-        );
+        const {user,accessToken,refreshToken} = await sequelize.transaction(async(t)=>{
+            const user = await User.create({ username:name, email : email, password : hashedPassword },{transaction:t});
+            
+    
+            const newUser = {
+                id: user.id,
+                email,
+            };
+     
+            const accessToken = generateAccessToken(newUser);
+            const refreshToken = generateRefreshToken(newUser);
+            const expiresAt = new Date();
+            expiresAt.setHours(expiresAt.getHours() + 1);
+    
+            await Session.create({userId:user.id,token:refreshToken,deletedAt:expiresAt },{transaction:t})
+            return {user,accessToken, refreshToken};
+        })
+        const { password:_password, ...safeUser } = user.toJSON();
+        
 
-        const newUser = {
-            id: result.rows[0].id,
-            name,
-            email,
-            password: hashedPassword,
-        };
-
-        const accessToken = generateAccessToken(newUser);
-        const refreshToken = generateRefreshToken(newUser);
-
-
-        await pool.query(
-      `INSERT INTO sessiontable (user_id, token, expires_at)
-       VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
-      [result.rows[0].id, refreshToken]
-    );
-
-        logActivity(newUser, "signed up");   
+        logger.info(`User ${newUser.id} signed up`);   
 
         res.status(201).json({
-            result : result.rows[0],
-            message: "User registered successfully 2",
+            safeUser,
+            message: "User registered successfully",
             accessToken,
             refreshToken
         });
 
     } catch (error) {
         logger.error(error.stack || error.message);
-        console.log(error)
 
         if(error.code=="23505"){
             return res.status(409).json({
@@ -170,6 +158,7 @@ async function signup(req,res){
         });
     }
 }
+ 
 
 
 async function refreshToken(req,res) {
@@ -184,24 +173,26 @@ async function refreshToken(req,res) {
 
         const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
 
-        const result = await pool.query('SELECT id,email, password FROM users WHERE email = $1', [decoded.email]);
-        if (result.rows.length===0) {
+        const result = await User.findOne({
+            where:{ email:decoded.email }
+        })
+        if (!result) {
             return res.status(401).json({
                 message: "Invalid refresh token"
             });
         }
 
-        const user = result.rows[0];
-
-        const token = await pool.query('SELECT token FROM sessiontable WHERE user_id = $1 AND token = $2', [user.id, refreshToken]);
-
-        if (token.rows.length===0) {
+        const result1 = await Session.findOne({
+            where:{userId : result.id , token:refreshToken}
+        })
+        
+        if (!result1) {
             return res.status(401).json({
                 message: "token expired login again"
             });
         }
 
-        const accessToken = generateAccessToken(user);
+        const accessToken = generateAccessToken({id:result.id,email:result.email});
 
         res.json({
             accessToken
@@ -224,22 +215,25 @@ async function logout(req,res) {
                 message: "Refresh token is required"
             });
         }
-
-        const users = await getUsers();
-
-        const user = users.find(
-            user => (user.refreshTokens || []).includes(refreshToken)
-        );
-
-        if (user) {
-            user.refreshTokens = user.refreshTokens.filter(
-                token => token !== refreshToken
-            );
-            await saveUsers(users);
-
-            logActivity(user, "logged out");
+        const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
+        const result = await User.findOne({
+            where:{ email:decoded.email }
+        })
+        if (!result) {
+            return res.status(401).json({
+                message: "Invalid refresh token"
+            });
         }
-
+        const result1 = await Session.findOne({
+            where:{userId : result.id , token:refreshToken}
+        })
+        if (!result1) {
+            return res.status(401).json({
+                message: "token expired login again"
+            });
+        }
+        await result1.destroy();
+        
         res.json({
             message: "Logged out successfully"
         });
@@ -266,22 +260,21 @@ async function logoutAll(req,res) {
 
         const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
 
-        const users = await getUsers();
+        const result = await User.findOne({
+            where:{ email:decoded.email }
+        })
 
-        const user = users.find(
-            user => user.id === decoded.id
-        );
-
-        if (!user) {
-            return res.status(403).json({
+        if (!result) {
+            return res.status(401).json({
                 message: "Invalid refresh token"
             });
         }
 
-        user.refreshTokens = [];
-        await saveUsers(users);
+        await Session.destroy({
+            where:{userId : result.id}
+        });
 
-        logActivity(user, "logged out from all devices");
+        logger.info(`User ${result.id} logged out from all devices`);
 
         res.json({
             message: "Logged out from all devices"
@@ -305,11 +298,9 @@ async function forgotPassword(req,res) {
             });
         }
 
-        const users = await getUsers();
-
-        const user = users.find(
-            user => user.email === email
-        );
+        const user = await User.findOne({
+            where:{ email:email }
+        })
 
         if (!user) {
             return res.status(404).json({
@@ -319,7 +310,8 @@ async function forgotPassword(req,res) {
 
         const resetToken = jwt.sign(
             {
-                id: user.id
+                id:user.id,
+                email:email
             },
             RESET_SECRET,
             {
@@ -327,10 +319,13 @@ async function forgotPassword(req,res) {
             }
         );
 
-        user.resetToken = resetToken;
-        await saveUsers(users);
+        await Session.create({
+            userId : user.id,
+            token:resetToken,
+        })
 
-        logActivity(user, "requested a password reset");
+
+        logger.info(`User ${user.id} requested a password reset`);
 
         res.json({
             message: "Reset token generated. In a real app this would be emailed instead of returned here",
@@ -359,25 +354,39 @@ async function resetPassword(req,res) {
 
         const decoded = jwt.verify(resetToken, RESET_SECRET);
 
-        const users = await getUsers();
+        const user = await User.findOne({
+            where:{ email:decoded.email }
+        })
 
-        const user = users.find(
-            user => user.id === decoded.id
-        );
-
-        if (!user || user.resetToken !== resetToken) {
+        if (!user) {
             return res.status(403).json({
                 message: "Invalid or expired reset token"
             });
         }
 
-        user.password = await bcrypt.hash(newPassword, 10);
-        user.resetToken = null;
-        user.refreshTokens = [];
+        const reset = await Session.findOne({
+            where:{token:resetToken}
+        })
 
-        await saveUsers(users);
+        if (!reset) {
+            return res.status(403).json({
+                message: "Invalid or expired reset token"
+            });
+        }
 
-        logActivity(user, "reset their password");
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await sequelize.transaction(async (t) => {
+            user.password = hashedPassword;
+            await user.save({ transaction: t });
+
+            await Session.destroy({
+                where: { userId: user.id },
+                transaction: t
+            });
+        });
+
+        logger.info(`User ${user.id} reset their password`);
 
         res.json({
             message: "Password reset successful. Please sign in again"
@@ -389,6 +398,47 @@ async function resetPassword(req,res) {
         });
     }
 }
+async function deleteAccount(req,res){
+    try{
+        const{password }=req.body;
+        if(!password){
+            return res.status(400).json({
+                message:"Password is required"
+            })
+        }
+        const user = await User.findOne({
+            where:{id:req.user.id}
+        });
+        if(!user){
+            return res.status(404).json({
+                message:"User not found"
+            });
+        }
+
+        const passwordMatch = await bcrypt.compare(password,user.password);
+        if(!passwordMatch){
+            return res.status(401).json({
+                message:"Incorrect password"
+            })
+        }
+
+        await sequelize.transaction(async(t)=>{{
+            await user.destroy({transaction:t});
+        }})
+
+        logger.info(`User ${user.id} deleted their account`);
+
+        res.json({
+            message: "Account deleted successfully"
+        });
+    } catch (error) {
+        logger.error(error.stack || error.message);
+
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}
 
 export default {
     signin,
@@ -397,12 +447,6 @@ export default {
     logout,
     logoutAll,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    deleteAccount
 }
-
-// Access tokens are short-lived (15m) and verified by src/middlewares/auth.js on every protected route.
-// Refresh tokens are long-lived (7d); each user can hold several at once (src/jsonfiles/users.json ->
-// refreshTokens[]), one per signed-in device. /refresh-token trades a valid one for a new access token,
-// /logout removes just that one, and /logout-all wipes every device's session at once.
-// Forgot/reset password uses a separate short-lived (15m) resetToken stored on the user record and
-// checked at /reset-password; resetting a password also clears all refreshTokens, forcing a fresh signin.

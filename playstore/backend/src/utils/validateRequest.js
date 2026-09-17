@@ -12,7 +12,6 @@ function validateRequest(req, res, next) {
             }))
         });
     }
-
     next();
 }
 

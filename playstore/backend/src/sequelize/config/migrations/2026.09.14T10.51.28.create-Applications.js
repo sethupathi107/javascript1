@@ -3,24 +3,27 @@ import { DataTypes } from '@sequelize/core';
 export const up = async params => {
     const sequelize = params.context;
     const qi = sequelize.queryInterface;
-    await qi.createTable('application', {
+    await qi.createTable('Applications', {
         id: {
             type: DataTypes.UUID,
             allowNull: false,
             primaryKey: true,
             unique: true,
         },
-        userid: {
+        userId: {
             type: DataTypes.UUID,
             allowNull: false,
-            unique: true,
         },
-        category: {
-            type: DataTypes.STRING,
+        categoryId: {
+            type: DataTypes.UUID,
             allowNull: false,
-            unique: true,
         },
         name:{
+            type:DataTypes.STRING,
+            allowNull:false,
+            validate:{notEmpty:true }
+        },
+        applicationURL:{
             type:DataTypes.STRING,
             allowNull:false,
             validate:{notEmpty:true }
@@ -39,5 +42,5 @@ export const up = async params => {
 /** @type {import('umzug').MigrationFn<any>} */
 export const down = async params => {
     const sequelize = params.context;
-    await sequelize.getQueryInterface().dropTable('application')
+    await sequelize.getQueryInterface().dropTable('Applications')
 };

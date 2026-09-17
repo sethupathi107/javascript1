@@ -1,5 +1,5 @@
 import fs from "fs/promises";
-import { logger, logActivity } from "../utils/logger.js";
+import { logger } from "../utils/logger.js";
 
 const USERS_FILE = "./src/jsonfiles/users.json";
 const APPS_FILE = "./src/jsonfiles/apps.json";
@@ -40,7 +40,7 @@ async function getActivity(req, res) {
             };
         });
 
-        logActivity(req.user, "viewed the admin activity dashboard");
+        logger.info(`User ${req.user.id} viewed the admin activity dashboard`);
 
         res.json({
             totalUsers: users.length,

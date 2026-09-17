@@ -1,15 +1,19 @@
 import { Model, DataTypes } from '@sequelize/core';
 
 export default function defineCategory(sequelize) {
-  class Category extends Model {
+class Category extends Model {
     static associate(models){
       Category.hasMany(models.Application,{
-        foreignKey: 'categoryId',
-        as:'apps',
+        foreignKey: {
+          name: 'categoryId',
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
+        },
+        as: 'apps'
       })
     }
-  }
-
+}
+ 
   Category.init(
     {
       id: {

@@ -1,22 +1,42 @@
 import { Model, DataTypes } from '@sequelize/core';
 
 export default function defineApplication(sequelize, { User, Category }) {
-  class Application extends Model {
+class Application extends Model {
     static associate(models){
         Application.belongsTo(models.Category, {
-            foreignKey:'categoryId',
-            as:'category',
+            foreignKey: {
+                name: 'categoryId',
+                onDelete: 'CASCADE',
+                onUpdate: 'CASCADE',
+            },
+            as: 'category',
         })
-        Application.belongsTo(models.User,{
-            foreignKey:"userId",
-            as:'user'
+        Application.belongsTo(models.User, {
+            foreignKey: {
+                name: "userId",
+                onDelete: 'CASCADE',
+                onUpdate: 'CASCADE',
+            },
+            as: 'user',
         })
-        Application.hasMany(models.Installed,{
-            foreignKey:'applicationId',
-            as:'installed'
+        Application.hasMany(models.Installed, {
+            foreignKey: {
+                name: 'applicationId',
+                onDelete: 'CASCADE',
+                onUpdate: 'CASCADE',
+            },
+            as: 'installed',
+        })
+        Application.hasMany(models.Image, {
+            foreignKey: {
+                name: 'applicationId',
+                onDelete: 'CASCADE',
+                onUpdate: 'CASCADE',
+            },
+            as: 'images',
         })
     }
-  }
+}
   Application.init(
     {
       id: {
@@ -49,6 +69,16 @@ export default function defineApplication(sequelize, { User, Category }) {
         allowNull: false,
         validate: { notEmpty: true, len: [2, 50] },
       },
+      description: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: { notEmpty: true, len: [2, 50] },
+      },
+      applicationURL: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: { notEmpty: true, len: [2, 50] },
+      },
       installCount: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -60,9 +90,25 @@ export default function defineApplication(sequelize, { User, Category }) {
       modelName: 'Application',
       timestamps: true,
       paranoid: true,
-      underscored: true,
     }
   );
+
+  Application.addHook("afterDestroy",async(instance, options)=>{
+    const {Image,Installed}=instance.sequelize.models;
+    await Image.destroy({
+      where:{
+        applicationId:instance.id
+      },
+      transaction:options.transaction
+    })
+
+    await Installed.destroy({
+      where:{
+        applicationId: instance.id
+      },
+      transaction:options.transaction
+    })
+  })
 
   return Application;
 }

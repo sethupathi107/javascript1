@@ -1,24 +1,19 @@
 import fs from "fs/promises";
-import { logger, logActivity } from "../utils/logger.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { logger } from "../utils/logger.js";
+import { Image, Application } from "../sequelize/config/database.js";
 
-const IMAGES_FILE = "./src/jsonfiles/images.json";
-
-async function getImages() {
-    const data = await fs.readFile(IMAGES_FILE, "utf-8");
-    return JSON.parse(data);
-}
-
-async function saveImages(images) {
-    await fs.writeFile(IMAGES_FILE, JSON.stringify(images, null, 2));
-}
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOAD_DIR = path.join(__dirname, "../../uploads/images");
 
 async function getAppImages(req, res) {
     try {
-        const appId = Number(req.params.id);
-        const images = await getImages();
-        const appImages = images.filter(image => image.appId === appId);
+        const {applicationId} = req.body;
 
-        res.json(appImages);
+        const images = await Image.findAll({ where: { applicationId } });
+
+        res.json(images);
     } catch (error) {
         logger.error(error.stack || error.message);
         res.status(500).json({ message: "Internal server error" });
@@ -27,25 +22,23 @@ async function getAppImages(req, res) {
 
 async function addAppImage(req, res) {
     try {
-        const appId = Number(req.params.id);
-        const { url } = req.body;
+        const {applicationId} = req.body;
 
-        if (!url) {
-            return res.status(400).json({ message: "Image url is required" });
+        if (!req.file) {
+            return res.status(400).json({ message: "Image file is required" });
         }
 
-        const images = await getImages();
+        const app = await Application.findByPk(applicationId);
+        if (!app) {
+            return res.status(404).json({ message: "App not found" });
+        }
 
-        const newImage = {
-            id: Date.now(),
-            appId,
-            url
-        };
+        const newImage = await Image.create({
+            applicationId,
+            filename: req.file.filename,
+        });
 
-        images.push(newImage);
-        await saveImages(images);
-
-        logActivity(req.user, "added an image to app", { appId, imageId: newImage.id });
+        logger.info(`User ${req.user.id} added image ${newImage.id} to app ${applicationId}`);
 
         res.status(201).json(newImage);
     } catch (error) {
@@ -56,28 +49,55 @@ async function addAppImage(req, res) {
 
 async function deleteAppImage(req, res) {
     try {
-        const appId = Number(req.params.id);
+        const {applicationId} = req.body;
         const { imageId } = req.body;
 
         if (!imageId) {
             return res.status(400).json({ message: "imageId is required" });
         }
 
-        const images = await getImages();
-        const index = images.findIndex(
-            image => image.appId === appId && image.id === imageId
-        );
+        const image = await Image.findOne({ where: { id: imageId, applicationId } });
 
-        if (index === -1) {
+        if (!image) {
             return res.status(404).json({ message: "Image not found" });
         }
 
-        const [deletedImage] = images.splice(index, 1);
-        await saveImages(images);
+        const filename = image.filename;
 
-        logActivity(req.user, "deleted an image from app", { appId, imageId: deletedImage.id });
+        await image.destroy();
 
-        res.json({ message: "Image deleted", image: deletedImage });
+        fs.unlink(path.join(UPLOAD_DIR, filename)).catch((err) => {
+            logger.error(`Failed to remove image file ${filename}: ${err.message}`);
+        });
+
+        logger.info(`User ${req.user.id} deleted image ${image.id} from app ${applicationId}`);
+
+        res.json({ message: "Image deleted", image });
+    } catch (error) {
+        logger.error(error.stack || error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+async function getImageFile(req, res) {
+    try {
+        const { imageId } = req.body;
+
+        const image = await Image.findByPk(imageId);
+        if (!image) {
+            return res.status(404).json({ message: "Image not found" });
+        }
+
+        const filePath = path.join(UPLOAD_DIR, image.filename);
+
+        res.sendFile(filePath, (err) => {
+            if (err) {
+                logger.error(err.stack || err.message);
+                if (!res.headersSent) {
+                    res.status(404).json({ message: "File not found on server" });
+                }
+            }
+        });
     } catch (error) {
         logger.error(error.stack || error.message);
         res.status(500).json({ message: "Internal server error" });
@@ -87,5 +107,6 @@ async function deleteAppImage(req, res) {
 export default {
     getAppImages,
     addAppImage,
-    deleteAppImage
+    deleteAppImage,
+    getImageFile,
 };

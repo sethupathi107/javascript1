@@ -1,18 +1,26 @@
 import { Model, DataTypes } from '@sequelize/core';
 
 export default function defineUser(sequelize) {
-  class User extends Model {
+class User extends Model {
     static associate(models){
         User.hasMany(models.Application,{
-            foreignKey:"userId",
-            as:'application'
+            foreignKey: {
+                name: "userId",
+                onDelete: 'CASCADE',
+                onUpdate: 'CASCADE',
+            },
+            as:'application',
         })
         User.hasMany(models.Installed,{
-            foreignKey:'userId',
-            as:'installed'
+            foreignKey: {
+                name: 'userId',
+                onDelete: 'CASCADE',
+                onUpdate: 'CASCADE',
+            },
+            as:'installed', 
         })
     }
-  }
+}
 
   User.init(
     {
@@ -46,6 +54,29 @@ export default function defineUser(sequelize) {
       timestamps: true,
     }
   );
+
+  User.addHook("afterDestroy", async (instance, options) => {
+    const { Application, Installed, Session } = instance.sequelize.models;
+
+    const apps = await Application.findAll({
+        where: { userId: instance.id },
+        transaction: options.transaction
+    });
+
+    for (const app of apps) {
+        await app.destroy({ transaction: options.transaction });
+    }
+
+    await Installed.destroy({
+        where: { userId: instance.id },
+        transaction: options.transaction
+    });
+
+    await Session.destroy({
+        where: { userId: instance.id },
+        transaction: options.transaction
+    });
+});
 
   return User;
 }

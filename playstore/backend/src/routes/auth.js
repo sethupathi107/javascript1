@@ -2,6 +2,7 @@ import express from "express";
 import authentication from "../controller/auth.js"
 import authValidators from "../utils/validators/auth.js";
 import validateRequest from "../utils/validateRequest.js";
+import auth from "../middlewares/auth.js";
 
 const router = express.Router();
 
@@ -12,6 +13,7 @@ router.post("/logout", authValidators.refreshTokenValidator, validateRequest, au
 router.post("/logout-all", authValidators.refreshTokenValidator, validateRequest, authentication.logoutAll);
 router.post("/forgot-password", authValidators.forgotPasswordValidator, validateRequest, authentication.forgotPassword);
 router.post("/reset-password", authValidators.resetPasswordValidator, validateRequest, authentication.resetPassword);
+router.delete("/delete-account", auth, authValidators.deleteAccountValidator, validateRequest, authentication.deleteAccount);
 
 export default router;
 
