@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { User , Session } from "../sequelize/config/database.js";
 import { logger } from "../utils/logger.js";
 import sequelize from "../sequelize/config/database.js";
+import mailQueue from "../utils/mailQueue.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_SECRET = process.env.REFRESH_SECRET;
@@ -16,6 +17,7 @@ function generateAccessToken(user) {
         {
             id: user.id,
             email: user.email,
+            role: user.role,
         },
         JWT_SECRET,
         {
@@ -70,7 +72,8 @@ async function signin(req,res) {
         }
         const user1 = {
             id:user.id,
-            email:user.email
+            email:user.email,
+            role:user.role
         };
 
         const accessToken = generateAccessToken(user1);
@@ -82,7 +85,7 @@ async function signin(req,res) {
         await Session.create({
             userId:user.id,
             token:refreshToken,
-            deletedAt:expiresAt
+            expireAt:expiresAt
         })
 
         logger.info(`User ${user.id} signed in`);
@@ -92,6 +95,16 @@ async function signin(req,res) {
             accessToken,
             refreshToken
         });
+
+        try {
+            await mailQueue.add("login-notification", {
+                to: user.email,
+                subject: "New login detected",
+                text: `Hi, you just logged in at ${new Date().toISOString()}. If this wasn't you, please secure your account.`,
+            });
+        } catch (error) {
+            logger.error("Failed to enqueue login email: ", error.message);
+        }
 
     } catch (error) {
         logger.error(error.stack || error.message);
@@ -116,12 +129,16 @@ async function signup(req,res){
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const {user,accessToken,refreshToken} = await sequelize.transaction(async(t)=>{
-            const user = await User.create({ username:name, email : email, password : hashedPassword },{transaction:t});
-            
+            // role is never taken from the request body - signup only ever
+            // creates a "user" account. Promoting someone to admin still
+            // requires hand-editing the DB (see CONTEXT.md).
+            const user = await User.create({ username:name, email : email, password : hashedPassword, role: "user" },{transaction:t});
+
     
             const newUser = {
                 id: user.id,
                 email,
+                role: user.role,
             };
      
             const accessToken = generateAccessToken(newUser);
@@ -129,13 +146,13 @@ async function signup(req,res){
             const expiresAt = new Date();
             expiresAt.setHours(expiresAt.getHours() + 1);
     
-            await Session.create({userId:user.id,token:refreshToken,deletedAt:expiresAt },{transaction:t})
+            await Session.create({userId:user.id,token:refreshToken,expireAt:expiresAt },{transaction:t})
             return {user,accessToken, refreshToken};
         })
         const { password:_password, ...safeUser } = user.toJSON();
         
 
-        logger.info(`User ${newUser.id} signed up`);   
+        logger.info(`User ${user.id} signed up`);   
 
         res.status(201).json({
             safeUser,
@@ -143,6 +160,16 @@ async function signup(req,res){
             accessToken,
             refreshToken
         });
+
+        try {
+            await mailQueue.add("signUp-notification", {
+                to: user.email,
+                subject: "New user",
+                text: `Hi, this is just new user to the playstore world`,
+            });
+        } catch (error) {
+            logger.error("Failed to enqueue login email: ", error.message);
+        }
 
     } catch (error) {
         logger.error(error.stack || error.message);
@@ -168,8 +195,10 @@ async function refreshToken(req,res) {
         if (!refreshToken) {
             return res.status(400).json({
                 message: "Refresh token is required"
-            });
+            }); 
         }
+
+        console.log(refreshToken);
 
         const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
 
@@ -192,13 +221,14 @@ async function refreshToken(req,res) {
             });
         }
 
-        const accessToken = generateAccessToken({id:result.id,email:result.email});
+        const accessToken = generateAccessToken({id:result.id,email:result.email,role:result.role});
 
         res.json({
             accessToken
         });
 
     } catch (error) {
+        logger.error(error.stack || error.message);
         return res.status(403).json({
             message: "Invalid or expired refresh token"
         });
@@ -328,9 +358,17 @@ async function forgotPassword(req,res) {
         logger.info(`User ${user.id} requested a password reset`);
 
         res.json({
-            message: "Reset token generated. In a real app this would be emailed instead of returned here",
-            resetToken
+            message: "Reset token generated. and send it to user mail",
         });
+        try {
+            await mailQueue.add("login-notification", {
+                to: user.email,
+                subject: "password change request",
+                text: `new password request at ${new Date().toISOString()} ${resetToken}`,
+            });
+        } catch (error) {
+            logger.error("Failed to enqueue login email: ", error.message);
+        }
 
     } catch (error) {
         logger.error(error.stack || error.message);
@@ -393,6 +431,7 @@ async function resetPassword(req,res) {
         });
 
     } catch (error) {
+        logger.error(error.stack || error.message);
         return res.status(403).json({
             message: "Invalid or expired reset token"
         });

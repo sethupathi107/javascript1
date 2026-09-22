@@ -7,28 +7,38 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node --env-file=.env server.js",
     "dev": "node --env-file=.env --watch server.js",
+    "reindex:apps": "node --env-file=.env src/opensearch/reindexApplications.js",
     "migrate": "node --env-file=.env src/sequelize/config/cli.js up",
     "migrate:down": "node --env-file=.env src/sequelize/config/cli.js down",
     "migrate:status": "node --env-file=.env src/sequelize/config/cli.js pending",
-    "migrate:create": "node --env-file=.env src/sequelize/config/cli.js create --folder src/sequelize/config/migrations --name"
+    "migrate:create": "node --env-file=.env src/sequelize/config/cli.js create --folder src/sequelize/config/migrations --name",
+    "seed": "node seed/seed.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@bull-board/api": "^9.10.1",
+    "@bull-board/express": "^9.10.1",
+    "@opensearch-project/opensearch": "^3.6.0",
     "@sequelize/core": "^7.0.0-alpha.48",
     "@sequelize/postgres": "^7.0.0-alpha.48",
     "bcrypt": "^6.0.0",
+    "bullmq": "^6.3.7",
     "express": "^5.2.1",
     "express-validator": "^7.3.2",
+    "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.4.0",
     "nodemailer": "^10.0.10",
     "nodemon": "^3.1.14",
     "pg": "^8.23.0",
+    "pg-copy-streams": "^7.0.0",
     "pg-hstore": "^2.3.4",
+    "redis": "^6.2.1",
     "umzug": "^3.8.3",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "winston-transport": "^4.9.0"
   }
 }

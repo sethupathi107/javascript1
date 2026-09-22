@@ -12,11 +12,9 @@ export default function defineLogs(sequelize){
           unique: true,
           primaryKey: true,
         },
-        name: {
-          type: DataTypes.STRING,
+        message: {
+          type: DataTypes.TEXT,
           allowNull: false,
-          unique: true,
-          validate: { notEmpty: true, len: [2, 20] },
         },
       },
       {

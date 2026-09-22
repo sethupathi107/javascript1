@@ -46,11 +46,16 @@ class User extends Model {
         allowNull: false,
         validate: { notEmpty: true, len: [60, 60] },
       },
+      role: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'user',
+        validate: { isIn: [['user', 'admin']] },
+      },
     },
     {
       sequelize,
       modelName: 'User',
-      paranoid: true,
       timestamps: true,
     }
   );
